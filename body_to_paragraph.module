@@ -1,0 +1,46 @@
+<?php
+
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\node\Entity\Node;
+use Drupal\paragraphs\Entity\Paragraph;
+
+/**
+ * Implements hook_update_N().
+ */
+function body_to_paragraph_update_100017() {
+  // Load nodes of a specific content type.
+  $query = \Drupal::entityQuery('node')
+    ->condition('type', 'article')
+    ->accessCheck(FALSE);
+
+  $nids = $query->execute();
+
+  if (!empty($nids)) {
+    $nodes = \Drupal\node\Entity\Node::loadMultiple($nids);
+
+    // Loop through nodes and migrate data.
+    foreach ($nodes as $node) {
+      // Get data from old body field.
+      $body_value = $node->get('body')->value;
+
+      // Create a new paragraph entity.
+      $paragraph = \Drupal\paragraphs\Entity\Paragraph::create([
+        'type' => 'body',
+        'field_body_paragraph' => [
+          'value' => $body_value,
+          'format' => 'full_html', // Set the desired text format
+        ],
+      ]);
+
+      // Set the paragraph entity as a reference on the node.
+      $node->set('field_paragraphs', $paragraph);
+
+      // Save the node and paragraph.
+      $node->save();
+      $paragraph->save();
+    }
+  }
+}
+
+
+

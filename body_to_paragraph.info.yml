@@ -1,5 +1,0 @@
-name: Body to Paragraph
-type: module
-description: copies body field to a paragraph
-package: Custom
-core_version_requirement: ^9 || ^10

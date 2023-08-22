@@ -7,7 +7,7 @@ use Drupal\paragraphs\Entity\Paragraph;
 /**
  * Implements hook_update_N().
  */
-function body_to_paragraph_update_100017() {
+function field_to_paragraph_update_100017() {
   // Load nodes of a specific content type.
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')

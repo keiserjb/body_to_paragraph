@@ -3,11 +3,12 @@
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Implements hook_update_N().
  */
-function field_to_paragraph_update_100017() {
+function field_to_paragraph_update_8005() {
   // Load nodes of a specific content type.
   $query = \Drupal::entityQuery('node')
     ->condition('type', 'article')
@@ -25,15 +26,15 @@ function field_to_paragraph_update_100017() {
 
       // Create a new paragraph entity.
       $paragraph = \Drupal\paragraphs\Entity\Paragraph::create([
-        'type' => 'body',
-        'field_body_paragraph' => [
+        'type' => 'ama_body',
+        'ama_body' => [
           'value' => $body_value,
           'format' => 'full_html', // Set the desired text format
         ],
       ]);
 
       // Set the paragraph entity as a reference on the node.
-      $node->set('field_paragraphs', $paragraph);
+      $node->set('field_components', $paragraph);
 
       // Save the node and paragraph.
       $node->save();
@@ -41,6 +42,3 @@ function field_to_paragraph_update_100017() {
     }
   }
 }
-
-
-

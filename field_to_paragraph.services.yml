@@ -1,0 +1,5 @@
+services:
+  field_to_paragraph.update_field_to_paragraph_command:
+    class: \Drupal\field_to_paragraph\Commands\UpdateFieldToParagraphCommand
+    tags:
+      - { name: drush.command }

@@ -1,5 +1,0 @@
-services:
-  field_to_paragraph.command:
-    class: \Drupal\field_to_paragraph\Commands\FieldToParagraphCommand
-    tags:
-      - { name: drush.command }

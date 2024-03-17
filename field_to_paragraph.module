@@ -1,75 +1,69 @@
 <?php
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\node\Entity\Node;
-use Drupal\paragraphs\Entity\Paragraph;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
+function field_to_paragraph_update_1003(&$sandbox)
+{
+  //We are using the sandbox variable to update in batches of 25
+  if (!isset($sandbox['progress'])) {
+    $query = new EntityFieldQuery();
+    $count = $query->entityCondition('entity_type', 'node', '=')
+      ->entityCondition('bundle', 'article')
+      ->count()
+      ->execute();
 
-/**
- * Implements hook_update_N().
- */
-function field_to_paragraph_update_8080() {
-  // Load nodes of a specific content type.
-  $query = \Drupal::entityQuery('node')
-    ->condition('type', 'afs_get_started')
-    ->accessCheck(FALSE);
+    $sandbox['progress'] = 0;
+    $sandbox['max'] = $count;
 
-  $nids = $query->execute();
-
-  if (!empty($nids)) {
-    $nodes = Node::loadMultiple($nids);
-
-    foreach ($nodes as $node) {
-      $body_value = $node->get('body')->value;
-
-      // Create the body paragraph component.
-      $paragraphComponent = Paragraph::create([
-        'type'     => 'ama_body',
-        // Replace with your actual body paragraph type machine name.
-        'ama_body' => [
-          'value'  => $body_value,
-          'format' => 'full_html',
-        ],
-      ]);
-      $paragraphComponent->save();
-
-      // Create the section paragraph.
-      $paragraphSection = Paragraph::create([
-        'type' => 'section',
-        // Replace with your actual section paragraph type machine name.
-      ]);
-
-      // Set the layout_paragraphs behavior settings for the section.
-      $paragraphSection->setBehaviorSettings('layout_paragraphs', [
-        'layout'      => 'layout_onecol', // Set your layout.
-        'parent_uuid' => NULL,
-        'region'      => NULL,
-      ]);
-      $paragraphSection->save();
-
-      // Set the behavior settings for the body paragraph component.
-      $paragraphComponent->setBehaviorSettings('layout_paragraphs', [
-        'region'      => 'content',
-        // Replace with your actual region where the paragraph should be placed.
-        'parent_uuid' => $paragraphSection->uuid(),
-      ]);
-      $paragraphComponent->save();
-
-      // Prepare the list of paragraphs to set on the node's field.
-      $final_paragraph_reference_list = [
-        [
-          'target_id'          => $paragraphSection->id(),
-          'target_revision_id' => $paragraphSection->getRevisionId(),
-        ],
-        [
-          'target_id'          => $paragraphComponent->id(),
-          'target_revision_id' => $paragraphComponent->getRevisionId(),
-        ],
-      ];
-
-      // Replace 'field_components' with your actual main paragraph reference field machine name.
-      $node->set('field_components', $final_paragraph_reference_list);
-      $node->save();
-    }
   }
+
+  $query = new EntityFieldQuery();
+  $result = $query->entityCondition('entity_type', 'node', '=')
+    ->entityCondition('bundle', 'page')
+    ->range($sandbox['progress'], 100)
+    ->execute();
+
+  $nodes = entity_load('node', array_keys($result['node']));
+
+  foreach ($nodes as $node) {
+      try {
+        $entity = entity_create(
+          'paragraphs_item',
+          ['field_name' => 'field_paragraphs', 'bundle' => 'body']
+        );
+        $entity->setHostEntity('node', $node);
+        $entity->field_body_paragraph = [
+          LANGUAGE_NONE => [
+            [
+              'value' => $node->body['und'][0]['value'],
+              'summary' => $node->body['und'][0]['summary'],
+              'format' => $node->body['und'][0]['format']
+            ],
+          ],
+        ];
+        /*$entity->pfp_columns = [
+          LANGUAGE_NONE => [
+            [
+              'value' => 'pfp-colauto'
+            ],
+          ],
+        ];*/
+        $entity->save();
+      } catch (Exception $e) {
+        watchdog(
+          'field_to_paragraph',
+          'Problem with node @node_id',
+          ['@node_id' => $node->vid],
+          WATCHDOG_ERROR
+        );
+      }
+
+    $sandbox['progress']++;
+  }
+
+  watchdog('field_to_paragraph', 'Processed :progress / :count page', array(
+    ':progress' => $sandbox['progress'],
+    ':count' => $sandbox['max'],
+  ));
+
+  $sandbox['#finished'] = empty($sandbox['max']) || empty($node) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
 }

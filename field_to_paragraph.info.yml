@@ -1,5 +1,0 @@
-name: Field to Paragraph
-description: Copies field data.
-type: module
-package: Custom
-core_version_requirement: ^9 || ^10

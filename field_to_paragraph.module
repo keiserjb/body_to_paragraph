@@ -8,37 +8,68 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 /**
  * Implements hook_update_N().
  */
-function field_to_paragraph_update_8005() {
+function field_to_paragraph_update_8080() {
   // Load nodes of a specific content type.
   $query = \Drupal::entityQuery('node')
-    ->condition('type', 'article')
+    ->condition('type', 'afs_get_started')
     ->accessCheck(FALSE);
 
   $nids = $query->execute();
 
   if (!empty($nids)) {
-    $nodes = \Drupal\node\Entity\Node::loadMultiple($nids);
+    $nodes = Node::loadMultiple($nids);
 
-    // Loop through nodes and migrate data.
     foreach ($nodes as $node) {
-      // Get data from old body field.
       $body_value = $node->get('body')->value;
 
-      // Create a new paragraph entity.
-      $paragraph = \Drupal\paragraphs\Entity\Paragraph::create([
-        'type' => 'ama_body',
+      // Create the body paragraph component.
+      $paragraphComponent = Paragraph::create([
+        'type'     => 'ama_body',
+        // Replace with your actual body paragraph type machine name.
         'ama_body' => [
-          'value' => $body_value,
-          'format' => 'full_html', // Set the desired text format
+          'value'  => $body_value,
+          'format' => 'full_html',
         ],
       ]);
+      $paragraphComponent->save();
 
-      // Set the paragraph entity as a reference on the node.
-      $node->set('field_components', $paragraph);
+      // Create the section paragraph.
+      $paragraphSection = Paragraph::create([
+        'type' => 'section',
+        // Replace with your actual section paragraph type machine name.
+      ]);
 
-      // Save the node and paragraph.
+      // Set the layout_paragraphs behavior settings for the section.
+      $paragraphSection->setBehaviorSettings('layout_paragraphs', [
+        'layout'      => 'layout_onecol', // Set your layout.
+        'parent_uuid' => NULL,
+        'region'      => NULL,
+      ]);
+      $paragraphSection->save();
+
+      // Set the behavior settings for the body paragraph component.
+      $paragraphComponent->setBehaviorSettings('layout_paragraphs', [
+        'region'      => 'content',
+        // Replace with your actual region where the paragraph should be placed.
+        'parent_uuid' => $paragraphSection->uuid(),
+      ]);
+      $paragraphComponent->save();
+
+      // Prepare the list of paragraphs to set on the node's field.
+      $final_paragraph_reference_list = [
+        [
+          'target_id'          => $paragraphSection->id(),
+          'target_revision_id' => $paragraphSection->getRevisionId(),
+        ],
+        [
+          'target_id'          => $paragraphComponent->id(),
+          'target_revision_id' => $paragraphComponent->getRevisionId(),
+        ],
+      ];
+
+      // Replace 'field_components' with your actual main paragraph reference field machine name.
+      $node->set('field_components', $final_paragraph_reference_list);
       $node->save();
-      $paragraph->save();
     }
   }
 }
